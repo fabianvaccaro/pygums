@@ -1,0 +1,2 @@
+sudo fswebcam -d /dev/video0 -i 0 --no-banner -r 640x480 test.jpeg
+python entropy_gen.py

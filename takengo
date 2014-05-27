@@ -1,0 +1,3 @@
+sudo fswebcam -d /dev/video0 -r 160x120 test.jpeg
+python seg_general.py
+gpicview lego.jpeg

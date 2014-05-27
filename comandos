@@ -1,0 +1,6 @@
+fswebcam -d /dev/video0 -r 640x480 test.jpeg
+
+
+uvcdynctrl -s 'Focus, Auto' 0
+
+uvcdynctrl -s 'Focus (absolute)' 100
