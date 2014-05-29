@@ -10,7 +10,7 @@ import pymeanshift as pms
 from numpy import array
 
 #load images
-original_image=Image.open('/home/pi/Desktop/webcam/test.jpeg')
+original_image=Image.open('test.jpeg')
 #gris =original_image.convert('L')
 im = np.asarray(original_image)
 gris = im[:,:,0]
