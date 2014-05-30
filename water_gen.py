@@ -9,17 +9,23 @@ from skimage import io, color
 from skimage.filter.rank import entropy, median, mean, mean_bilateral
 from skimage.morphology import disk
 from skimage.util import img_as_ubyte
-from skimage import exposure, util
 from numpy import array
-from skimage import exposure, img_as_uint, img_as_ubyte
+from skimage import exposure, img_as_uint, img_as_ubyte, feature, util
+
+#fijar constantes
+DISCK_ENTRO = 4
+MARKER_THRESHOLD = 15
+
 
 #preparar plot
 fig, [(ax0, ax1, ax2), (ax3, ax4, ax5), (ax6, ax7, ax8)] = plt.subplots(ncols=3, nrows=3, figsize=(15,8))
 
 #cargar imagenes >>> ori
-#ori = Image.open('C:/mat/pygums/wingums/test.jpeg')
-ori = Image.open('tests/S3.tif')
-#ori = Image.open('C:/mat/pygums/wingums/test3.jpeg')
+directorio = 'tests/'
+extension = '.tif'
+nombre_fichero = 'S2'
+ori = Image.open(directorio + nombre_fichero + extension)
+
 
 #ecualizar histograma >>> ori_eq
 ori_eq = exposure.equalize_hist(ori, nbins=256)
@@ -44,8 +50,8 @@ chic.flags.writeable = True
 
 #establecer marcadores para segmentacion por watershed
 markers = np.zeros_like(arr)
-markers[arr < 15] = 1
-markers[arr > 15] = 2
+markers[arr < MARKER_THRESHOLD] = 1
+markers[arr > MARKER_THRESHOLD] = 2
 
 #mascara de segmetacion por watershed
 elevation_map = sobel(arr)
@@ -66,24 +72,40 @@ reescalado = exposure.rescale_intensity(arrm, in_range=(0, 255))
 chic_reesc = exposure.rescale_intensity(chicm, in_range=(0, 255))
 
 #imagen de entropia e histograma de entropia de arrm reescalado
-entro_arrm_img = entropy(reescalado, disk(10))
-entro_arrm_hist = exposure.histogram(reescalado, nbins = 100)
+entro_arrm_img = entropy(reescalado, disk(DISCK_ENTRO))
+entro_arrm_hist = np.histogram(entro_arrm_img[sinholes!=0], bins = 100)
 entro_arm_masked = entro_arrm_img[sinholes!=0]
+max_arrm = np.float64(np.amax(entro_arrm_hist[0]))
+entro_hist_tmp = np.float64(np.copy(entro_arrm_hist[0]))
+entro_arrm_hist_normed = entro_hist_tmp / max_arrm
+print 'STD Entropia b*: ' + str(np.std(entro_arrm_hist_normed))
 
-entro_chicm_img = entropy(chic_reesc, disk(10))
-entro_chicm_hist = exposure.histogram(chic_reesc, nbins = 100)
+#imagen de entropia e histograma de entropia de chicm reescalado
+entro_chicm_img = entropy(chic_reesc, disk(DISCK_ENTRO))
 entro_chicm_masked = entro_chicm_img[sinholes!=0]
+entro_chicm_masked = entro_chicm_masked[entro_chicm_masked != 0]
+entro_chicm_hist = np.histogram(entro_chicm_masked, bins = 100)
+max_chicm_h = np.float64(np.amax(entro_chicm_hist[0]))
+entro_chicm_tmp = np.float64(np.copy(entro_chicm_hist[0]))
+entro_chicm_hist_normed = entro_chicm_tmp / max_chicm_h
+print 'STD Entropia a*: ' + str(np.std(entro_chicm_hist_normed))
 
-#histograma del color de arrm reescalado dentro del area de interes >>> arrm_masked
+
+
+
+#histograma del color de arrm reescalado dentro del area de interes >>> arrm_color_hist
 arrm_masked = reescalado[sinholes!=0]
 arrm_color_hist = exposure.histogram(arrm_masked, nbins = 256)
 
+#histograma del color de chicm reescalado dentro del area de interes >>> chicm_color_hist
 chicm_masked = chic_reesc[sinholes!=0]
 chicm_color_hist = exposure.histogram(chicm_masked, nbins = 256)
-
-#remocion de picos en cero 
 chicm_color_hist[0][0] = 0
-entro_chicm_masked = entro_chicm_masked[entro_chicm_masked != 0]
+max_chicm = np.float64(np.amax(chicm_color_hist[0]))
+chicm_hist_tmp = np.float64(np.copy(chicm_color_hist[0]))
+chicm_hist_normed = chicm_hist_tmp / max_chicm
+print 'STD Color a*: ' + str(np.std(chicm_hist_normed))
+
 
 
 
@@ -119,7 +141,7 @@ ax5.set_xlim(0,6)
 ax5.set_yticks([])
 
 
-img6 = ax6.plot(chicm_color_hist[1].ravel(), chicm_color_hist[0].ravel())
+img6 = ax6.plot(chicm_color_hist[1].ravel(), chicm_hist_normed.ravel())
 ax6.set_title('Histograma de color en canal a*')
 
 
@@ -133,5 +155,7 @@ ax8.set_title('Histograma de Entropia canal a*')
 ax8.ticklabel_format(axis='y', style='scientific', scilimits=(0,0))
 ax8.set_xlim(0,6)
 ax8.set_yticks([])
-
+plt.savefig('capturas_a/' + nombre_fichero + '.png')
 plt.show()
+plt.close()
+
