@@ -16,8 +16,8 @@ from skimage.util import img_as_ubyte
 from numpy import array
 from skimage import exposure, img_as_uint, img_as_ubyte, feature, util
 
-
-#Function to generate file-name of image from sample number <III>, chewing cycles <CC>, side <SS>, and file extension <EXT>
+#####################################################################################################################################################################################
+#Function to format the file-name of image from sample number <III>, chewing cycles <CC>, side <SS>, and file extension <EXT>
 def sample_fname(III, CC, SS, EXT):
 	nsample = "%03d" % III
 	ncycle =  str(CC)
@@ -26,7 +26,7 @@ def sample_fname(III, CC, SS, EXT):
 	result = nsample + '-' + ncycle + '-' + SS + EXT
 	return result
 
-	
+#####################################################################################################################################################################################
 #Function to load an image from the database, returns RGB
 #	Parameters:
 #		filename		- >	File-name of the image
@@ -37,7 +37,7 @@ def load_image(filename, database_path):
 	rgb = Image.open(database_path + filename)	#Load image from database
 	return rgb	#Return RGB image
 
-	
+#####################################################################################################################################################################################	
 #Function to generate the segmentation mask, returns binary matrix
 #	Parameters:
 #		rgb		- >		Original image in RGB
@@ -58,17 +58,76 @@ def smask(rgb, SMT):
 	segmentation = watershed(elevation_map, markers)	#Segmentation using watershed algorithm
 	segmentation_mask = ndimage.binary_fill_holes(segmentation - 1) #Reduce the number of holes in the segmentation mask
 	return segmentation_mask	#Returns the segmentation mask
+
+#####################################################################################################################################################################################	
+#Function to extract pixel value and histogram STD features from the AoI of a 2D Image
+#	Parameters:
+#		input_image			- >		2D value image
+#		segmentation_mask	- >		Segmentation Mask: Binary 2D array with the same dimensions of the original image, 1s represent Area of Interest (AoI)
+#		nbins				- >		Number of bins to be computed for the histogram analysis. Default value is 200
+#	Returns
+#		IM_Features	- >	Array: (IM_AOI_STD, IM_AOI_HIST_NORM_STD) ; from the AoI of the image
+#				IM_AOI_STD			- >	 Standard deviation of the values of the pixels of the image
+#				IM_AOI_HIST_NORM_STD	- >	 Standard deviation of the normalized histogram of the image
+def ColorHistogramAnalysis(input_image, segmentation_mask, nbins = 200):
+	IM = np.copy(input_image)	#Creates a copy of the input image
+	IM_AOI = IM[segmentation_mask != 0] #Extracts the values of the pixels of IM that are inside the AoI, discards the rest
+	IM_AOI_STD = np.std(IM_AOI)	#Calculates the Standard Deviation of the values of the pixels in the AoI of the image
+	IM_AOI_HIST = np.histogram(IM_AOI, bins = nbins)	#Computes the histogram of the AoI of the Image for (200 by default) bins, returns array of the form [(values),(bins)]
+	IM_AOI_HIST[0][0] = 0	#Clears the first bin of the histogram to reduce aberrant values
+	IM_AOI_HIST_MAX = np.float64(np.amax(IM_AOI_HIST[0])) #Extracts the maximum value of the IM_AOI_HIST
+	IM_HIST0_TMP = np.copy(IM_AOI_HIST[0])	#Creates a temporal copy of the IM_AOI_HIST values
+	IM_AOI_HIST_NORM = IM_HIST0_TMP / IM_AOI_HIST_MAX	#Generates the normalized histogram of the AoI of image
+	IM_AOI_HIST_NORM_STD = np.std(IM_AOI_HIST_NORM)	#Calculates the Standard Deviation of the normalized histogram of the AoI of the image
+	IM_Features = (IM_AOI_STD, IM_AOI_HIST_NORM_STD)	#List features: (STD of the values of the pixels , STD of the normalized histogram) ; from the AoI of the image
+	return IM_Features
+
+#####################################################################################################################################################################################	
+#Function to compute the Entropy Image of a 2D image after rescaling intensity and clearing non-AoI area 
+#	Parameters:
+#		input_image			- >		2D value image
+#		segmentation_mask	- >		Segmentation Mask: Binary 2D array with the same dimensions of the original image, 1s represent Area of Interest (AoI)
+#		dsize 				- >		Size of the sampling area used for the Entropy algorithm. Default value is 5
+#	Returns:
+#		RES_ENTRO	- >	 Entropy Image consisting of a 2D Numpy Array of the same size of the input image after rescaling intensity and clearing non-AoI area
+def getEntropyImage(input_image, segmentation_mask, dsize = 5):
+	IM = IM = np.copy(input_image)	#Creates a copy of the input image
+	IM[segmentation_mask==0] = 0	#Clears the area around AoI, setting all non-AoI pixels as 0
+	RES = exposure.rescale_intensity(IM, in_range=(0, 255))	#Rescales the intensity of the pixels of the image to the range 0 -> 255
+	RES_ENTRO = entropy(RES, disk(dsize))	#Computes the entropy image of the rescaled input image
+	return RES_ENTRO	
 	
-def HSVanalysis(rgb, segmentation_mask):
-	hsv = color.rgb2hsv(rgb)	#Transformation from RGB to HSV color model
-	hchannel = np.copy(hsv[:,:,0])	#Creates a copy of the H channel
-	hchannel_interest = hchannel[segmentation_mask != 0] #Extracts the values of the pixels of hchannel that are inside the AoI, discards the rest
-	hchannel_interest_std = np.std(hchannel_interest)	#Calculates the Standard Deviation of the values of the pixels in the AoI ot the H channel
-	hchannel_interest_hist = np.histogram(hchannel_interest, bins = 200)	#Computes the histogram of hchannel_interest for 200 bins, returns array of the form [(values),(bins)]
-	hchannel_interest_hist_max = np.float64(np.amax(hchannel_interest_hist[0])) #Extracts the maximum value of the hchannel_interest_hist
-	h_hist0_tmp = np.copy(hchannel_interest_hist[0])	#Creates a temporal copy of the hchannel_interest_hist values
-	hchannel_interest_hist_normed = h_hist0_tmp / hchannel_interest_hist_max	#Generates the normalized histogram of the AoI of the H channel
-	hchannel_interest_hist_normed_std = np.std(hchannel_interest_hist_normed)	#Calculates the Standard Deviation of the normalized histogram of the AoI of the H channel
-	results = (hchannel_interest_std, hchannel_interest_hist_normed_std)	#List features: (STD of the values of the pixels , STD of the normalized histogram) ; from the AoI of the H channel
-	return results
+#####################################################################################################################################################################################	
+#Function to extract a set of Mixing Features of the digitalized image of a sample of a Mixing Ability Test using chewing gums of two different colors
+#	Parameters:
+#		rgb					- >		RGB image of the digitalized image
+#		segmentation_mask	- >		Segmentation Mask: Binary 2D array with the same dimensions of the original image, 1s represent Area of Interest (AoI)
+#		dsize = 5			- >		Size of the sampling area used for the Entropy algorithm. Default value is 5
+#		nbins				- >		Number of bins to be computed for the histogram analysis. Default value is 200
+#	Returns:
+#		MIXIG_FEATURES		- >		Array : (A_AOI_STD, A_AOI_HIST_NORM_STD, A_ENT_AOI_STD, A_ENT_AOI_HIST_NORM_STD, B_AOI_STD, B_AOI_HIST_NORM_STD, B_ENT_AOI_STD, B_ENT_AOI_HIST_NORM_STD, H_AOI_STD, H_AOI_HIST_NORM_STD)
+#				A_AOI_STD				- >	 Standard deviation of the values of the pixels of the A channel from the LAB color model
+#				A_AOI_HIST_NORM_STD		- >	 Standard deviation of the normalized histogram of the A channel from the LAB color model
+#				A_ENT_AOI_STD			- >  Standard deviation of the values of the pixels of the rescaled entropy image of the A channel from the LAB color model
+#				A_ENT_AOI_HIST_NORM_STD	- >	 Standard deviation of the normalized histogram of the entropy image of the A channel from the LAB color model
+#				B_AOI_STD				- >	 Standard deviation of the values of the pixels of the B channel from the LAB color model
+#				B_AOI_HIST_NORM_STD		- >	 Standard deviation of the normalized histogram of the B channel from the LAB color model
+#				B_ENT_AOI_STD			- >  Standard deviation of the values of the pixels of the rescaled entropy image of the B channel from the LAB color model
+#				B_ENT_AOI_HIST_NORM_STD	- >	 Standard deviation of the normalized histogram of the entropy image of the B channel from the LAB color model
+#				H_AOI_STD			- >	 Standard deviation of the values of the pixels of the H channel from the HSV color model
+#				H_AOI_HIST_NORM_STD	- >	 Standard deviation of the normalized histogram of the H channel from the HSV color model
+def MixingFeaturesExtraction(rgb, segmentation_mask, nbins = 200, dsize = 5):
+	im = np.copy(rgb)	#Creates a copy of the input image
+	lab = color.rgb2lab(rgb)	#Transformation from RGB to Lab color model
+	hsv = color.rgb2hsv(rgb)	#Transformation from HSV to Lab color model
+	(A_AOI_STD, A_AOI_HIST_NORM_STD) = ColorHistogramAnalysis(lab[:,:,1], segmentation_mask, nbins)
+	(A_ENT_AOI_STD, A_ENT_AOI_HIST_NORM_STD) = ColorHistogramAnalysis(getEntropyImage(lab[:,:,1],segmentation_mask, dsize), segmentation_mask, nbins)
+	(B_AOI_STD, B_AOI_HIST_NORM_STD) = ColorHistogramAnalysis(lab[:,:,2], segmentation_mask, nbins)
+	(B_ENT_AOI_STD, B_ENT_AOI_HIST_NORM_STD) = ColorHistogramAnalysis(getEntropyImage(lab[:,:,2],segmentation_mask, dsize), segmentation_mask, nbins)
+	(H_AOI_STD, H_AOI_HIST_NORM_STD) = ColorHistogramAnalysis(hsv[:,:,0], segmentation_mask, nbins)
+	MIXIG_FEATURES = (A_AOI_STD, A_AOI_HIST_NORM_STD, A_ENT_AOI_STD, A_ENT_AOI_HIST_NORM_STD, B_AOI_STD, B_AOI_HIST_NORM_STD, B_ENT_AOI_STD, B_ENT_AOI_HIST_NORM_STD, H_AOI_STD, H_AOI_HIST_NORM_STD)
+	return MIXIG_FEATURES
+	
+	
+	
 

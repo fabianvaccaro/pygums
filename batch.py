@@ -40,10 +40,11 @@ for patient in range(SAMPLE_INIT, SAMPLE_END):
 		sideA_smask = pygums.smask(sideA, SEGMENTATION_MARKER_THRESHOLD)	#Segmentation mask for the side A of the sample
 		sideB_smask = pygums.smask(sideB, SEGMENTATION_MARKER_THRESHOLD)	#Segmentation mask for the side B of the sample
 		
-		#Extract features from the the AoI of the H channel in the HSV color model.
-		#Array of the form:  (STD of the values of the pixels , STD of the normalized histogram)
-		sideA_HAnalysis = pygums.HSVanalysis(sideA, sideA_smask)	#Features from the H channel for the side A of the sample 
-		sideB_HAnalysis = pygums.HSVanalysis(sideB, sideB_smask)	#Features from the H channel for the side B of the sample
+		#compute mixing features for side A
+		A_MIXIG_FEATURES = pygums.MixingFeaturesExtraction(sideA, sideA_smask, nbins = 200, dsize = 5)
+		B_MIXIG_FEATURES = pygums.MixingFeaturesExtraction(sideB, sideB_smask, nbins = 200, dsize = 5)
+		
+		print A_MIXIG_FEATURES
 		
 		
 		
