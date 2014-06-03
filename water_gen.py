@@ -1,6 +1,6 @@
 from skimage.filter import canny
 import numpy as np
-import Image
+from PIL import Image
 from scipy import ndimage
 import matplotlib.pyplot as plt
 from skimage.filter import sobel
@@ -48,6 +48,9 @@ chic.flags.writeable = True
 
 
 
+
+
+
 #establecer marcadores para segmentacion por watershed
 markers = np.zeros_like(arr)
 markers[arr < MARKER_THRESHOLD] = 1
@@ -71,6 +74,18 @@ chicm[sinholes==0] = 0
 reescalado = exposure.rescale_intensity(arrm, in_range=(0, 255))
 chic_reesc = exposure.rescale_intensity(chicm, in_range=(0, 255))
 
+#convertir imagen original en HSV y calcular STD de los pixeles y del histograma de la capa H
+im_hsv = color.rgb2hsv(ori)
+h_channel = np.copy(im_hsv[:,:,0])
+h_std = np.std(h_channel[sinholes!=0])
+h_hist = np.histogram(h_channel[sinholes!=0], bins = 200)
+max_h_hist = np.float64(np.amax(h_hist[0]))
+h_hist0_tmp = np.copy(h_hist[0])
+h_hist_normed = h_hist0_tmp / max_h_hist
+h_hist_std = np.std(h_hist_normed)
+
+
+
 #imagen de entropia e histograma de entropia de arrm reescalado
 entro_arrm_img = entropy(reescalado, disk(DISCK_ENTRO))
 entro_arrm_hist = np.histogram(entro_arrm_img[sinholes!=0], bins = 100)
@@ -78,7 +93,7 @@ entro_arm_masked = entro_arrm_img[sinholes!=0]
 max_arrm = np.float64(np.amax(entro_arrm_hist[0]))
 entro_hist_tmp = np.float64(np.copy(entro_arrm_hist[0]))
 entro_arrm_hist_normed = entro_hist_tmp / max_arrm
-print 'STD Entropia b*: ' + str(np.std(entro_arrm_hist_normed))
+
 
 #imagen de entropia e histograma de entropia de chicm reescalado
 entro_chicm_img = entropy(chic_reesc, disk(DISCK_ENTRO))
@@ -88,7 +103,7 @@ entro_chicm_hist = np.histogram(entro_chicm_masked, bins = 100)
 max_chicm_h = np.float64(np.amax(entro_chicm_hist[0]))
 entro_chicm_tmp = np.float64(np.copy(entro_chicm_hist[0]))
 entro_chicm_hist_normed = entro_chicm_tmp / max_chicm_h
-print 'STD Entropia a*: ' + str(np.std(entro_chicm_hist_normed))
+
 
 
 
@@ -104,9 +119,17 @@ chicm_color_hist[0][0] = 0
 max_chicm = np.float64(np.amax(chicm_color_hist[0]))
 chicm_hist_tmp = np.float64(np.copy(chicm_color_hist[0]))
 chicm_hist_normed = chicm_hist_tmp / max_chicm
-print 'STD Color a*: ' + str(np.std(chicm_hist_normed))
 
 
+
+
+#impresion de descriptores
+print 'STD del canal H:   ' + str(h_std)
+print 'STD del H_HIST:    ' + str(h_hist_std)
+print 'STD Color a*:      ' + str(np.std(chicm_hist_normed))
+print 'STD Entropia a*:   ' + str(np.std(entro_chicm_hist_normed))
+print 'STD Entropia b*:   ' + str(np.std(entro_arrm_hist_normed))
+print 'FINAL SCORE  :     ' + str((np.std(chicm_hist_normed) * np.std(entro_chicm_hist_normed) *  np.std(entro_arrm_hist_normed) * h_hist_std * h_std)* 10000)
 
 
 #plot del proceso
