@@ -18,16 +18,22 @@
 #Import required libraries
 
 import pygums as pygums
+import numpy as np
 
 #Define constants
 SAMPLE_INIT = 7
-SAMPLE_END = 17
+SAMPLE_END = 8
 CHEWING_CYCLES = (3, 6, 9, 12, 15, 18, 21, 25)
 DATABASE_PATH = 'database/'
 FILE_EXTENSION = '.tif'
 DISCK_ENTROPY = 4
 SEGMENTATION_MARKER_THRESHOLD = 15
 
+#Define variables
+
+#TEST_FEATURES - > Array(PATIENT, CYCLES, SIDE, A_AOI_STD, A_AOI_HIST_NORM_STD, A_ENT_AOI_STD, A_ENT_AOI_HIST_NORM_STD, B_AOI_STD, B_AOI_HIST_NORM_STD, B_ENT_AOI_STD, B_ENT_AOI_HIST_NORM_STD, H_AOI_STD, H_AOI_HIST_NORM_STD)
+TEST_FEATURES = []
+TEMP=[]
 
 #Main loop
 for patient in range(SAMPLE_INIT, SAMPLE_END):
@@ -40,14 +46,19 @@ for patient in range(SAMPLE_INIT, SAMPLE_END):
 		sideA_smask = pygums.smask(sideA, SEGMENTATION_MARKER_THRESHOLD)	#Segmentation mask for the side A of the sample
 		sideB_smask = pygums.smask(sideB, SEGMENTATION_MARKER_THRESHOLD)	#Segmentation mask for the side B of the sample
 		
-		#compute mixing features for side A
-		A_MIXIG_FEATURES = pygums.MixingFeaturesExtraction(sideA, sideA_smask, nbins = 200, dsize = 5)
-		B_MIXIG_FEATURES = pygums.MixingFeaturesExtraction(sideB, sideB_smask, nbins = 200, dsize = 5)
+		#Extract a set of Mixing Features for each side 
+		SIDEA_MIXIG_FEATURES = pygums.MixingFeaturesExtraction(sideA, sideA_smask, nbins = 200, dsize = 5)
+		SIDEB_MIXIG_FEATURES = pygums.MixingFeaturesExtraction(sideB, sideB_smask, nbins = 200, dsize = 5)
 		
-		print A_MIXIG_FEATURES
+
+		#Store extracted features into TEST_FEATURES array
+		TEMP_ARRAY_A = np.append((patient, cycle, 0),SIDEA_MIXIG_FEATURES)	# Creates a temporary array to append patient, cycle, side (0  ->  A) and SIDEA_MIXIG_FEATURES
+		TEMP_ARRAY_B = np.append((patient, cycle, 1),SIDEB_MIXIG_FEATURES)	# Creates a temporary array to append patient, cycle, side (1  ->  B) and SIDEB_MIXIG_FEATURES		
+		TEST_FEATURES.append(TEMP_ARRAY_A)	#Appends sample information and side A features to TEST_FEATURES
+		TEST_FEATURES.append(TEMP_ARRAY_B)	#Appends sample information and side B features to TEST_FEATURES
 		
-		
-		
+TEST_FEATURES = np.asarray(TEST_FEATURES)	#Transform TEST_FEATURES to a numpy array form
+np.save('features',	TEST_FEATURES)
 
 
 
