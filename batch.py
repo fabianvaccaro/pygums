@@ -33,7 +33,8 @@ SEGMENTATION_MARKER_THRESHOLD = 15
 
 #TEST_FEATURES - > Array(PATIENT, CYCLES, SIDE, A_AOI_STD, A_AOI_HIST_NORM_STD, A_ENT_AOI_STD, A_ENT_AOI_HIST_NORM_STD, B_AOI_STD, B_AOI_HIST_NORM_STD, B_ENT_AOI_STD, B_ENT_AOI_HIST_NORM_STD, H_AOI_STD, H_AOI_HIST_NORM_STD)
 TEST_FEATURES = []
-TEMP=[]
+EVALUATION = []
+
 
 #Main loop
 for patient in range(SAMPLE_INIT, SAMPLE_END):
@@ -56,9 +57,31 @@ for patient in range(SAMPLE_INIT, SAMPLE_END):
 		TEMP_ARRAY_B = np.append((patient, cycle, 1),SIDEB_MIXIG_FEATURES)	# Creates a temporary array to append patient, cycle, side (1  ->  B) and SIDEB_MIXIG_FEATURES		
 		TEST_FEATURES.append(TEMP_ARRAY_A)	#Appends sample information and side A features to TEST_FEATURES
 		TEST_FEATURES.append(TEMP_ARRAY_B)	#Appends sample information and side B features to TEST_FEATURES
+		print 'Paciente: ' + str(patient) + ' ,  ciclo: ' + str(cycle)
+		
 		
 TEST_FEATURES = np.asarray(TEST_FEATURES)	#Transform TEST_FEATURES to a numpy array form
+
+#Evaluation loop
+for cycle in CHEWING_CYCLES:
+	TEMP = TEST_FEATURES[TEST_FEATURES[:,1] == np.float64(cycle)]
+	A_AOI_STD_MEAN = np.mean(TEMP[:,3])
+	A_AOI_HIST_NORM_STD_MEAN = np.mean(TEMP[:,4])
+	A_ENT_AOI_STD_MEAN = np.mean(TEMP[:,5])
+	A_ENT_AOI_HIST_NORM_STD_MEAN = np.mean(TEMP[:,6])
+	B_AOI_STD_MEAN = np.mean(TEMP[:,7])
+	B_AOI_HIST_NORM_STD_MEAN = np.mean(TEMP[:,8])
+	B_ENT_AOI_STD_MEAN = np.mean(TEMP[:,9])
+	B_ENT_AOI_HIST_NORM_STD_MEAN = np.mean(TEMP[:,10])
+	H_AOI_STD_MEAN = np.mean(TEMP[:,11])
+	H_AOI_HIST_NORM_STD_MEAN = np.mean(TEMP[:,12])
+	EVALUATION.append((cycle, A_AOI_STD_MEAN, A_AOI_HIST_NORM_STD_MEAN, A_ENT_AOI_STD_MEAN, A_ENT_AOI_HIST_NORM_STD_MEAN, B_AOI_STD_MEAN, B_AOI_HIST_NORM_STD_MEAN, B_ENT_AOI_STD_MEAN, B_ENT_AOI_HIST_NORM_STD_MEAN, H_AOI_STD_MEAN, H_AOI_HIST_NORM_STD_MEAN))
+
+EVALUATION = np.asarray(EVALUATION)	
+
+	
 np.save('features',	TEST_FEATURES)
+np.savetxt('batch_results.txt', EVALUATION, fmt='%1.4f')
 
 
 
