@@ -35,7 +35,9 @@ def sample_fname(III, CC, SS, EXT):
 #		rgb				- > Image in RGB
 def load_image(filename, database_path):
 	rgb = Image.open(database_path + filename)	#Load image from database
-	return rgb	#Return RGB image
+	rgb = np.asarray(rgb)	#transforms PIL image into a numpy array
+	rgb = rgb[:,:,0:3]		#Takes the first three channels, discards additional channels
+	return rgb	#Return RGB image as a (n , m , 3) numpy array
 
 #####################################################################################################################################################################################	
 #Function to generate the segmentation mask, returns binary matrix

@@ -22,7 +22,7 @@ import numpy as np
 
 #Define constants
 SAMPLE_INIT = 7
-SAMPLE_END = 8
+SAMPLE_END = 300
 CHEWING_CYCLES = (3, 6, 9, 12, 15, 18, 21, 25)
 DATABASE_PATH = 'database/'
 FILE_EXTENSION = '.tif'
@@ -37,27 +37,30 @@ EVALUATION = []
 
 
 #Main loop
-for patient in range(SAMPLE_INIT, SAMPLE_END):
+for patient in range(SAMPLE_INIT, SAMPLE_END + 1):
 	for cycle in CHEWING_CYCLES:
-		#load each side of the sample
-		sideA= pygums.load_image(pygums.sample_fname(patient, cycle, 'A', FILE_EXTENSION), DATABASE_PATH) #original image of side A of the sample
-		sideB= pygums.load_image(pygums.sample_fname(patient, cycle, 'B', FILE_EXTENSION), DATABASE_PATH) #original image of side B of the sample
-		
-		#Generate segmentation masks for each side of the sample in order to separate the Area of Interest (AoI)
-		sideA_smask = pygums.smask(sideA, SEGMENTATION_MARKER_THRESHOLD)	#Segmentation mask for the side A of the sample
-		sideB_smask = pygums.smask(sideB, SEGMENTATION_MARKER_THRESHOLD)	#Segmentation mask for the side B of the sample
-		
-		#Extract a set of Mixing Features for each side 
-		SIDEA_MIXIG_FEATURES = pygums.MixingFeaturesExtraction(sideA, sideA_smask, nbins = 200, dsize = 5)
-		SIDEB_MIXIG_FEATURES = pygums.MixingFeaturesExtraction(sideB, sideB_smask, nbins = 200, dsize = 5)
-		
+		try:
+			#load each side of the sample
+			sideA= pygums.load_image(pygums.sample_fname(patient, cycle, 'A', FILE_EXTENSION), DATABASE_PATH) #original image of side A of the sample
+			sideB= pygums.load_image(pygums.sample_fname(patient, cycle, 'B', FILE_EXTENSION), DATABASE_PATH) #original image of side B of the sample
+			
+			#Generate segmentation masks for each side of the sample in order to separate the Area of Interest (AoI)
+			sideA_smask = pygums.smask(sideA, SEGMENTATION_MARKER_THRESHOLD)	#Segmentation mask for the side A of the sample
+			sideB_smask = pygums.smask(sideB, SEGMENTATION_MARKER_THRESHOLD)	#Segmentation mask for the side B of the sample
+			
+			#Extract a set of Mixing Features for each side 
+			SIDEA_MIXIG_FEATURES = pygums.MixingFeaturesExtraction(sideA, sideA_smask, nbins = 200, dsize = 5)
+			SIDEB_MIXIG_FEATURES = pygums.MixingFeaturesExtraction(sideB, sideB_smask, nbins = 200, dsize = 5)
+			
 
-		#Store extracted features into TEST_FEATURES array
-		TEMP_ARRAY_A = np.append((patient, cycle, 0),SIDEA_MIXIG_FEATURES)	# Creates a temporary array to append patient, cycle, side (0  ->  A) and SIDEA_MIXIG_FEATURES
-		TEMP_ARRAY_B = np.append((patient, cycle, 1),SIDEB_MIXIG_FEATURES)	# Creates a temporary array to append patient, cycle, side (1  ->  B) and SIDEB_MIXIG_FEATURES		
-		TEST_FEATURES.append(TEMP_ARRAY_A)	#Appends sample information and side A features to TEST_FEATURES
-		TEST_FEATURES.append(TEMP_ARRAY_B)	#Appends sample information and side B features to TEST_FEATURES
-		print 'Paciente: ' + str(patient) + ' ,  ciclo: ' + str(cycle)
+			#Store extracted features into TEST_FEATURES array
+			TEMP_ARRAY_A = np.append((patient, cycle, 0),SIDEA_MIXIG_FEATURES)	# Creates a temporary array to append patient, cycle, side (0  ->  A) and SIDEA_MIXIG_FEATURES
+			TEMP_ARRAY_B = np.append((patient, cycle, 1),SIDEB_MIXIG_FEATURES)	# Creates a temporary array to append patient, cycle, side (1  ->  B) and SIDEB_MIXIG_FEATURES		
+			TEST_FEATURES.append(TEMP_ARRAY_A)	#Appends sample information and side A features to TEST_FEATURES
+			TEST_FEATURES.append(TEMP_ARRAY_B)	#Appends sample information and side B features to TEST_FEATURES
+			print 'Paciente: ' + str(patient) + ' ,  ciclo: ' + str(cycle)
+		except:
+			print 'File : ' + pygums.sample_fname(patient, cycle, 'A', FILE_EXTENSION) + ' could not be processed, please check'
 		
 		
 TEST_FEATURES = np.asarray(TEST_FEATURES)	#Transform TEST_FEATURES to a numpy array form
